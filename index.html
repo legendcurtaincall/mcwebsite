@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的世界基岩版模组分享</title>
+    <style>
+        :root {
+            --bg: #121212; --card: #1e1e1e; --text: #e0e0e0; --sub: #a0a0a0;
+            --primary: #3b82f6; --border: #333; --accent: #10b981;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+        body { background: var(--bg); color: var(--text); padding: 15px; padding-bottom: 80px; }
+        
+        /* 顶部导航 */
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .home-btn { background: none; border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 8px; cursor: pointer; }
+        .home-btn:active { background: #333; }
+        
+        /* 搜索区域 */
+        .search-area { display: flex; align-items: center; gap: 8px; flex: 1; max-width: 250px; }
+        .toggle-btn { background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 8px; border-radius: 8px; cursor: pointer; font-size: 12px; white-space: nowrap; }
+        .search-input { flex: 1; background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 8px; outline: none; min-width: 0; }
+        .search-input:focus { border-color: var(--primary); }
+
+        /* 模组列表 */
+        .mod-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
+        @media (min-width: 600px) { .mod-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (min-width: 900px) { .mod-grid { grid-template-columns: repeat(3, 1fr); } }
+        
+        .mod-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 15px; display: flex; flex-direction: column; }
+        .mod-img { width: 100%; height: 150px; background: #2a2a2a; border-radius: 8px; margin-bottom: 10px; object-fit: cover; }
+        .mod-title { font-size: 18px; font-weight: bold; margin-bottom: 5px; }
+        .mod-desc { font-size: 13px; color: var(--sub); margin-bottom: 10px; flex: 1; }
+        
+        .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+        .tag { background: #2a2a2a; color: var(--primary); font-size: 11px; padding: 3px 8px; border-radius: 20px; }
+        
+        .download-info { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--sub); margin-bottom: 10px; }
+        
+        .download-btn { background: var(--primary); color: white; border: none; padding: 8px; border-radius: 8px; width: 100%; font-weight: bold; cursor: pointer; }
+        .download-btn:active { background: #2563eb; }
+        
+        .file-list { margin-bottom: 10px; }
+        .file-item { display: flex; justify-content: space-between; font-size: 12px; background: #2a2a2a; padding: 5px 8px; border-radius: 5px; margin-bottom: 5px; }
+        .file-item button { background: var(--accent); color: white; border: none; padding: 2px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; }
+
+        /* 悬浮按钮 */
+        .float-btn { position: fixed; bottom: 20px; background: var(--primary); color: white; border: none; padding: 12px 20px; border-radius: 30px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.5); cursor: pointer; z-index: 10; }
+        .btn-history { left: 20px; background: #6b7280; }
+        .btn-upload { right: 20px; }
+
+        /* 模态框 */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; justify-content: center; align-items: center; padding: 20px; }
+        .modal.active { display: flex; }
+        .modal-content { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; width: 100%; max-width: 400px; max-height: 80vh; overflow-y: auto; }
+        .modal-title { font-size: 18px; margin-bottom: 15px; font-weight: bold; }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 13px; margin-bottom: 5px; color: var(--sub); }
+        .form-group input, .form-group textarea { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 8px; border-radius: 6px; outline: none; }
+        .form-group input:focus, .form-group textarea:focus { border-color: var(--primary); }
+        .close-btn { background: var(--border); color: var(--text); border: none; padding: 10px; border-radius: 8px; width: 100%; margin-top: 10px; cursor: pointer; }
+        .submit-btn { background: var(--primary); color: white; border: none; padding: 10px; border-radius: 8px; width: 100%; margin-top: 10px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <!-- 顶部 -->
+    <header>
+        <button class="home-btn" onclick="window.location.reload()">← 返回主页</button>
+        <div class="search-area">
+            <button class="toggle-btn" id="searchToggle" onclick="toggleSearchMode()">🏷️ 标签</button>
+            <input type="text" class="search-input" id="searchInput" placeholder="搜索模组名称..." oninput="renderMods()">
+        </div>
+    </header>
+
+    <!-- 模组列表 -->
+    <div class="mod-grid" id="modGrid">
+        <!-- 由 JS 动态渲染 -->
+    </div>
+
+    <!-- 左下角：历史访问 -->
+    <button class="float-btn btn-history" onclick="openHistory()">🕒 历史访问</button>
+    
+    <!-- 右下角：上传模组 -->
+    <button class="float-btn btn-upload" onclick="openUpload()">☁️ 上传模组</button>
+
+    <!-- 上传模态框 -->
+    <div class="modal" id="uploadModal">
+        <div class="modal-content">
+            <div class="modal-title">上传模组 (需人工审核)</div>
+            <div class="form-group">
+                <label>模组名称</label>
+                <input type="text" id="upName" placeholder="输入模组名称">
+            </div>
+            <div class="form-group">
+                <label>模组简介</label>
+                <textarea id="upDesc" rows="3" placeholder="输入模组简介"></textarea>
+            </div>
+            <div class="form-group">
+                <label>标签 (用逗号分隔)</label>
+                <input type="text" id="upTags" placeholder="生存, 科技, 魔法">
+            </div>
+            <div class="form-group">
+                <label>测试内容图片 (可输入图片URL，或留空使用占位图)</label>
+                <input type="text" id="upImg" placeholder="https://...">
+            </div>
+            <div class="form-group">
+                <label>选择文件 (.mcpack / .mcaddon)</label>
+                <input type="file" id="upFile" accept=".mcpack,.mcaddon">
+            </div>
+            <button class="submit-btn" onclick="submitUpload()">提交审核</button>
+            <button class="close-btn" onclick="closeUpload()">取消</button>
+        </div>
+    </div>
+
+    <!-- 历史模态框 -->
+    <div class="modal" id="historyModal">
+        <div class="modal-content">
+            <div class="modal-title">历史访问记录</div>
+            <div id="historyList">暂无记录</div>
+            <button class="close-btn" onclick="document.getElementById('historyModal').classList.remove('active')">关闭</button>
+        </div>
+    </div>
+
+    <script>
+        // 初始化模拟数据
+        let mods = [
+            { id: 1, name: "幽匿感染", desc: "硬核生存挑战，探索被幽匿侵蚀的世界。", tags: ["生存", "冒险"], img: "https://picsum.photos/400/200?random=1", downloads: 1250, files: ["幽匿感染_v1.0.mcpack"] },
+            { id: 2, name: "神级武器", desc: "50+ 原创武器，全新锻造玩法，战斗体验升级。", tags: ["武器", "战斗"], img: "https://picsum.photos/400/200?random=2", downloads: 3420, files: ["神级武器_v2.1.mcaddon", "材质包_v2.1.mcpack"] },
+            { id: 3, name: "萌宠柯基", desc: "可以驯服柯基、橘猫等萌宠，陪伴你的生存之旅。", tags: ["生物", "宠物"], img: "https://picsum.photos/400/200?random=3", downloads: 890, files: ["萌宠柯基_v1.5.mcaddon"] },
+            { id: 4, name: "工业时代", desc: "完整的工业科技链，支持自动化生产。", tags: ["科技", "建筑"], img: "https://picsum.photos/400/200?random=4", downloads: 2100, files: ["工业时代_v3.0.mcaddon"] }
+        ];
+
+        // 历史记录
+        let history = JSON.parse(localStorage.getItem('mc_history')) || [];
+
+        // 渲染模组列表
+        function renderMods() {
+            const grid = document.getElementById('modGrid');
+            const searchVal = document.getElementById('searchInput').value.toLowerCase().trim();
+            const isTagMode = document.getElementById('searchToggle').innerText.includes('标签');
+
+            grid.innerHTML = '';
+            
+            mods.forEach(mod => {
+                // 搜索逻辑
+                if (searchVal) {
+                    if (isTagMode) {
+                        // 标签搜索
+                        const hasTag = mod.tags.some(t => t.toLowerCase().includes(searchVal));
+                        if (!hasTag) return;
+                    } else {
+                        // 名称搜索
+                        if (!mod.name.toLowerCase().includes(searchVal)) return;
+                    }
+                }
+
+                const card = document.createElement('div');
+                card.className = 'mod-card';
+                
+                let fileHtml = '';
+                mod.files.forEach(f => {
+                    fileHtml += `<div class="file-item"><span>${f}</span><button onclick="downloadFile('${mod.name}', '${f}')">下载</button></div>`;
+                });
+
+                card.innerHTML = `
+                    <img class="mod-img" src="${mod.img}" alt="${mod.name}" onerror="this.src='https://picsum.photos/400/200?random=99'">
+                    <div class="mod-title">${mod.name}</div>
+                    <div class="mod-desc">${mod.desc}</div>
+                    <div class="tags">${mod.tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>
+                    <div class="file-list">${fileHtml}</div>
+                    <div class="download-info">
+                        <span>下载量: ${mod.downloads}</span>
+                    </div>
+                    <button class="download-btn" onclick="downloadFile('${mod.name}', '${mod.files[0]}')">选择文件下载</button>
+                `;
+                grid.appendChild(card);
+            });
+
+            if (grid.innerHTML === '') {
+                grid.innerHTML = '<div style="color:#a0a0a0; text-align:center; padding:20px; grid-column:1/-1;">没有找到匹配的模组</div>';
+            }
+        }
+
+        // 切换搜索模式
+        function toggleSearchMode() {
+            const btn = document.getElementById('searchToggle');
+            const input = document.getElementById('searchInput');
+            if (btn.innerText.includes('标签')) {
+                btn.innerText = '📝 名称';
+                input.placeholder = '搜索标签...';
+            } else {
+                btn.innerText = '🏷️ 标签';
+                input.placeholder = '搜索模组名称...';
+            }
+            input.value = '';
+            renderMods();
+        }
+
+        // 下载文件逻辑
+        function downloadFile(modName, fileName) {
+            alert(`正在下载: ${fileName}\n（此为模拟下载，真实下载需部署服务器）`);
+            // 记录历史
+            const record = { name: modName, time: new Date().toLocaleString() };
+            if (!history.find(h => h.name === modName)) {
+                history.unshift(record);
+                if (history.length > 10) history.pop();
+                localStorage.setItem('mc_history', JSON.stringify(history));
+            }
+            // 增加下载量
+            const mod = mods.find(m => m.name === modName);
+            if (mod) { mod.downloads++; renderMods(); }
+        }
+
+        // 上传相关
+        function openUpload() { document.getElementById('uploadModal').classList.add('active'); }
+        function closeUpload() { document.getElementById('uploadModal').classList.remove('active'); }
+
+        function submitUpload() {
+            const name = document.getElementById('upName').value.trim();
+            const desc = document.getElementById('upDesc').value.trim();
+            const tags = document.getElementById('upTags').value.split(',').map(t => t.trim()).filter(t => t);
+            const img = document.getElementById('upImg').value.trim() || 'https://picsum.photos/400/200?random=99';
+            const fileInput = document.getElementById('upFile');
+
+            if (!name || !desc || tags.length === 0) return alert('请填写名称、简介和至少一个标签');
+            if (!fileInput.files.length) return alert('请选择文件');
+            
+            const file = fileInput.files[0];
+            if (!file.name.endsWith('.mcpack') && !file.name.endsWith('.mcaddon')) {
+                return alert('只能上传 .mcpack 或 .mcaddon 文件');
+            }
+
+            // 模拟人工审核（前端模拟已通过，真实需后端）
+            const newMod = {
+                id: Date.now(),
+                name: name,
+                desc: desc,
+                tags: tags,
+                img: img,
+                downloads: 0,
+                files: [file.name]
+            };
+            
+            mods.unshift(newMod);
+            renderMods();
+            closeUpload();
+            alert('上传成功！已提交人工审核（演示环境已自动通过）');
+            
+            // 清空表单
+            document.getElementById('upName').value = '';
+            document.getElementById('upDesc').value = '';
+            document.getElementById('upTags').value = '';
+            document.getElementById('upImg').value = '';
+            document.getElementById('upFile').value = '';
+        }
+
+        // 历史记录
+        function openHistory() {
+            const list = document.getElementById('historyList');
+            if (history.length === 0) {
+                list.innerHTML = '<div style="color:#a0a0a0; padding:10px;">暂无记录</div>';
+            } else {
+                list.innerHTML = history.map(h => `<div style="padding:8px 0; border-bottom:1px solid #333; font-size:14px; display:flex; justify-content:space-between;"><span>${h.name}</span><span style="color:#a0a0a0; font-size:12px;">${h.time}</span></div>`).join('');
+            }
+            document.getElementById('historyModal').classList.add('active');
+        }
+
+        // 初始渲染
+        renderMods();
+    </script>
+</body>
+</html>
