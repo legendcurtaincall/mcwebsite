@@ -40,10 +40,6 @@
         
         .download-btn { background: var(--primary); color: white; border: none; padding: 8px; border-radius: 8px; width: 100%; font-weight: bold; cursor: pointer; }
         .download-btn:active { background: #2563eb; }
-        
-        .file-list { margin-bottom: 10px; }
-        .file-item { display: flex; justify-content: space-between; font-size: 12px; background: #2a2a2a; padding: 5px 8px; border-radius: 5px; margin-bottom: 5px; }
-        .file-item button { background: var(--accent); color: white; border: none; padding: 2px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; }
 
         /* 悬浮按钮 */
         .float-btn { position: fixed; bottom: 20px; background: var(--primary); color: white; border: none; padding: 12px 20px; border-radius: 30px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.5); cursor: pointer; z-index: 10; }
@@ -105,7 +101,6 @@
                 <label>测试内容图片 (可输入图片URL，或留空使用占位图)</label>
                 <input type="text" id="upImg" placeholder="https://...">
             </div>
-            <!-- 修改点：将文件上传改为网盘链接输入 -->
             <div class="form-group">
                 <label>网盘下载链接 (如百度网盘、蓝奏云)</label>
                 <input type="text" id="upLink" placeholder="https://pan.baidu.com/...">
@@ -126,15 +121,18 @@
     </div>
 
     <script>
-        // 初始化模拟数据 (加入了 url 字段，指向真实的下载地址)
-        // 如果你把文件上传到了 GitHub 仓库的 files 文件夹，url 就写 "files/文件名.mcpack"
-        // 如果是网盘链接，url 就写 "https://..."
-        let mods = [
-            { id: 1, name: "幽匿感染", desc: "硬核生存挑战，探索被幽匿侵蚀的世界。", tags: ["生存", "冒险"], img: "https://picsum.photos/400/200?random=1", downloads: 1250, files: ["幽匿感染_v1.0.mcpack"], url: "files/幽匿感染_v1.0.mcpack" },
-            { id: 2, name: "神级武器", desc: "50+ 原创武器，全新锻造玩法，战斗体验升级。", tags: ["武器", "战斗"], img: "https://picsum.photos/400/200?random=2", downloads: 3420, files: ["神级武器_v2.1.mcaddon", "材质包_v2.1.mcpack"], url: "files/神级武器_v2.1.mcaddon" },
-            { id: 3, name: "萌宠柯基", desc: "可以驯服柯基、橘猫等萌宠，陪伴你的生存之旅。", tags: ["生物", "宠物"], img: "https://picsum.photos/400/200?random=3", downloads: 890, files: ["萌宠柯基_v1.5.mcaddon"], url: "files/萌宠柯基_v1.5.mcaddon" },
-            { id: 4, name: "工业时代", desc: "完整的工业科技链，支持自动化生产。", tags: ["科技", "建筑"], img: "https://picsum.photos/400/200?random=4", downloads: 2100, files: ["工业时代_v3.0.mcaddon"], url: "files/工业时代_v3.0.mcaddon" }
-        ];
+        // 初始数据为空，不再包含任何示例模组
+        let mods = [];
+        
+        // 尝试从本地存储读取数据（这样刷新页面数据不会丢失）
+        const savedMods = localStorage.getItem('mc_mods');
+        if (savedMods) {
+            try {
+                mods = JSON.parse(savedMods);
+            } catch (e) {
+                console.error("读取本地数据失败", e);
+            }
+        }
 
         // 历史记录
         let history = JSON.parse(localStorage.getItem('mc_history')) || [];
@@ -161,11 +159,8 @@
                 const card = document.createElement('div');
                 card.className = 'mod-card';
                 
-                // 修改点：传入真实的 url
-                let fileHtml = '';
-                mod.files.forEach(f => {
-                    fileHtml += `<div class="file-item"><span>${f}</span><button onclick="downloadFile('${mod.url}', '${f}')">下载</button></div>`;
-                });
+                // 适配新的数据结构，只有一个文件下载链接
+                let fileHtml = `<div class="file-item"><span>${mod.name}.mcaddon</span><button onclick="downloadFile('${mod.url}')">下载</button></div>`;
 
                 card.innerHTML = `
                     <img class="mod-img" src="${mod.img}" alt="${mod.name}" onerror="this.src='https://picsum.photos/400/200?random=99'">
@@ -176,13 +171,13 @@
                     <div class="download-info">
                         <span>下载量: ${mod.downloads}</span>
                     </div>
-                    <button class="download-btn" onclick="downloadFile('${mod.url}', '${mod.files[0]}')">下载最新版</button>
+                    <button class="download-btn" onclick="downloadFile('${mod.url}')">下载最新版</button>
                 `;
                 grid.appendChild(card);
             });
 
             if (grid.innerHTML === '') {
-                grid.innerHTML = '<div style="color:#a0a0a0; text-align:center; padding:20px; grid-column:1/-1;">没有找到匹配的模组</div>';
+                grid.innerHTML = '<div style="color:#a0a0a0; text-align:center; padding:40px 20px; grid-column:1/-1; font-size:14px;">暂无模组<br><span style="font-size:12px; color:#666; margin-top:10px; display:block;">点击右下角“上传模组”开始添加</span></div>';
             }
         }
 
@@ -201,24 +196,12 @@
             renderMods();
         }
 
-        // 下载文件逻辑 (修改点：删除了 alert，改为真实跳转)
-        function downloadFile(url, fileName) {
+        // 下载文件逻辑
+        function downloadFile(url) {
             if (!url || url === "undefined" || url === "") {
-                alert(`提示：该文件【${fileName}】还没有设置真实下载链接。\n请前往网盘下载或联系管理员。`);
+                alert(`提示：该模组还没有设置真实下载链接。\n请前往网盘下载或联系管理员。`);
                 return;
             }
-            // 记录历史
-            const record = { name: fileName, time: new Date().toLocaleString() };
-            if (!history.find(h => h.name === fileName)) {
-                history.unshift(record);
-                if (history.length > 10) history.pop();
-                localStorage.setItem('mc_history', JSON.stringify(history));
-            }
-            // 增加下载量 (模拟)
-            // 这里为了演示，直接打开链接，真实场景需要后端来增加下载量
-            // 为了用户体验，我们本地加一下显示效果
-            const mod = mods.find(m => m.files.includes(fileName));
-            if (mod) { mod.downloads++; renderMods(); }
             
             // 跳转到真实的下载链接
             window.open(url, '_blank');
@@ -228,7 +211,7 @@
         function openUpload() { document.getElementById('uploadModal').classList.add('active'); }
         function closeUpload() { document.getElementById('uploadModal').classList.remove('active'); }
 
-        // 修改点：修改了提交逻辑，去掉了文件上传，改成了获取链接
+        // 提交上传逻辑
         function submitUpload() {
             const name = document.getElementById('upName').value.trim();
             const desc = document.getElementById('upDesc').value.trim();
@@ -247,14 +230,24 @@
                 tags: tags,
                 img: img,
                 downloads: 0,
-                files: [name + ".mcaddon"], // 模拟文件名
                 url: link // 使用用户填写的真实链接
             };
             
             mods.unshift(newMod);
+            
+            // 保存到本地存储，这样刷新页面不会消失
+            localStorage.setItem('mc_mods', JSON.stringify(mods));
+            
             renderMods();
             closeUpload();
-            alert('上传成功！已提交人工审核（演示环境已自动通过，刷新页面后会丢失）');
+            
+            // 记录历史
+            const record = { name: name, time: new Date().toLocaleString() };
+            history.unshift(record);
+            if (history.length > 20) history.pop();
+            localStorage.setItem('mc_history', JSON.stringify(history));
+            
+            alert('上传成功！已提交人工审核（演示环境已自动通过，数据已保存在浏览器本地）');
             
             // 清空表单
             document.getElementById('upName').value = '';
